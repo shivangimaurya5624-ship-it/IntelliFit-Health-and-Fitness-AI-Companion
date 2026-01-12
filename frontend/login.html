@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login - IntelliFit</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <style>
+       /* --- GLOBAL STYLES (Force Green Nature) --- */
+        body { 
+            margin: 0; 
+            font-family: 'Poppins', sans-serif; 
+
+            background: url('https://images.unsplash.com/photo-1441974231531-c6227db76b6e?ixlib=rb-1.2.1&auto=format&fit=crop&w=1950&q=80') !important;
+            
+            background-size: cover !important; 
+            background-position: center !important;
+            background-repeat: no-repeat !important;
+            height: 100vh; 
+            display: flex; 
+            justify-content: center; 
+            align-items: center; 
+        }
+
+        /* --- LOGIN CARD (Glass Effect) --- */
+        .login-card {
+            background: rgba(255, 255, 255, 0.9); /* transparent white */
+            backdrop-filter: blur(10px); /* Blurry effect */
+            padding: 50px 40px;
+            width: 100%;
+            max-width: 400px;
+            border-radius: 20px;
+            box-shadow: 0 15px 35px rgba(0,0,0,0.1); /* Soft Shadow */
+            text-align: center;
+            border: 1px solid rgba(255, 255, 255, 0.5);
+        }
+
+        .login-card h2 { 
+            color: #2e7d32; /* Dark Green (Nature) */
+            margin-bottom: 10px; 
+            font-size: 32px; 
+        }
+        
+        .login-card p { 
+            color: #555; 
+            margin-bottom: 30px; 
+            font-size: 14px; 
+        }
+
+        /* --- INPUTS --- */
+        .input-group { margin-bottom: 20px; text-align: left; }
+        
+        label { display: block; margin-bottom: 8px; color: #444; font-weight: 600; font-size: 14px; }
+
+        input { 
+            width: 100%; padding: 14px; border: 1px solid #ccc; border-radius: 10px; 
+            box-sizing: border-box; font-family: inherit; transition: 0.3s; 
+            background: rgba(255,255,255,0.8);
+        }
+
+        input:focus { 
+            border-color: #2e7d32; outline: none; background: white; 
+            box-shadow: 0 0 10px rgba(46, 125, 50, 0.2); 
+        }
+
+        /* --- BUTTON --- */
+        button { 
+            width: 100%; padding: 15px; 
+            background: linear-gradient(45deg, #2e7d32, #4caf50); /* Green Gradient */
+            color: white; border: none; border-radius: 10px; 
+            font-size: 16px; font-weight: bold; cursor: pointer; 
+            transition: 0.3s; margin-top: 10px; 
+            box-shadow: 0 5px 15px rgba(46, 125, 50, 0.3);
+        }
+
+        button:hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(46, 125, 50, 0.4); }
+
+        /* --- LINKS --- */
+        .links { margin-top: 20px; font-size: 14px; }
+        .links a { color: #2e7d32; text-decoration: none; font-weight: 600; }
+        
+        .error-msg { 
+            color: #d32f2f; font-size: 14px; margin-top: 15px; display: none; 
+            background: #ffebee; padding: 10px; border-radius: 5px; 
+        }
+        
+        .home-link { display: inline-block; margin-top: 20px; color: #666; text-decoration: none; font-size: 13px; }
+        .home-link:hover { color: #2e7d32; }
+    </style>
+</head>
+<body>
+
+    <div class="login-card">
+        <h2>Welcome Back</h2>
+        <p>Login to your personal wellness space</p>
+
+        <form onsubmit="handleLogin(event)">
+            <div class="input-group">
+                <label>Email Address</label>
+                <input type="email" id="email" placeholder="email@example.com" required>
+            </div>
+
+            <div class="input-group">
+                <label>Password</label>
+                <input type="password" id="password" placeholder="••••••••" required>
+            </div>
+
+            <button type="submit" id="loginBtn">Login</button>
+            
+            <div id="errorBox" class="error-msg"></div>
+        </form>
+
+        <div class="links">
+            New here? <a href="index.html">Create Account</a>
+        </div>
+        
+        <a href="index.html" class="home-link">← Back to Home</a>
+    </div>
+
+    <script>
+        async function handleLogin(event) {
+            event.preventDefault(); 
+            
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            const btn = document.getElementById('loginBtn');
+            const errorBox = document.getElementById('errorBox');
+
+            btn.innerText = "Checking...";
+            btn.style.opacity = "0.8";
+            errorBox.style.display = "none";
+
+            try {
+                const response = await fetch('http://127.0.0.1:8000/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email: email, password: password })
+                });
+
+                const data = await response.json();
+
+                if (data.status === "Success") {
+                    localStorage.setItem('userData', JSON.stringify(data));
+                    window.location.href = "dashboard.html"; 
+                } else {
+                    showError(data.message || "Invalid Email or Password");
+                }
+
+            } catch (error) {
+                showError("Backend is not running!");
+            }
+
+            btn.innerText = "Login";
+            btn.style.opacity = "1";
+        }
+
+        function showError(msg) {
+            const box = document.getElementById('errorBox');
+            box.innerText = "⚠️ " + msg;
+            box.style.display = "block";
+        }
+    </script>
+</body>
+</html>

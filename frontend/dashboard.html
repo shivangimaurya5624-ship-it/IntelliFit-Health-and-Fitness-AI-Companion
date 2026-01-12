@@ -1,0 +1,403 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>IntelliFit Pro Dashboard</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <style>
+        :root { --primary: #2e7d32; --light-green: #e8f5e9; --dark: #2d3436; --sidebar-width: 250px; }
+        body { margin: 0; font-family: 'Poppins', sans-serif; background-color: #f4f7fa; color: var(--dark); display: flex; }
+        
+        /* SIDEBAR */
+        .sidebar { width: var(--sidebar-width); height: 100vh; background: white; position: fixed; left: 0; top: 0; padding: 20px; box-shadow: 2px 0 10px rgba(0,0,0,0.05); display: flex; flex-direction: column; z-index: 1000; }
+        .brand { font-size: 24px; font-weight: 700; color: var(--primary); margin-bottom: 40px; display: flex; align-items: center; gap: 10px; }
+        .menu-item { padding: 15px; margin-bottom: 10px; border-radius: 12px; color: #666; text-decoration: none; display: flex; align-items: center; gap: 15px; font-weight: 500; transition: 0.3s; }
+        .menu-item:hover, .menu-item.active { background: var(--light-green); color: var(--primary); }
+        .menu-item i { width: 20px; }
+        .logout-box { margin-top: auto; }
+        
+        /* CONTENT */
+        .main-content { margin-left: var(--sidebar-width); width: calc(100% - var(--sidebar-width)); padding: 30px 40px; }
+        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; }
+        .date-box { font-size: 14px; color: #888; background: white; padding: 8px 15px; border-radius: 20px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
+
+        /* GRID */
+        .dashboard-grid { display: grid; grid-template-columns: 2fr 1fr; gap: 30px; }
+        .card { background: white; border-radius: 20px; padding: 25px; box-shadow: 0 5px 20px rgba(0,0,0,0.03); margin-bottom: 30px; }
+
+        /* VIDEO PLAYER STYLING  */
+        .yoga-video { 
+            width: 100%; 
+            max-width: 300px;
+            border-radius: 15px; 
+            box-shadow: 0 10px 30px rgba(0,0,0,0.15); 
+            background: #000;
+        }
+
+        /* Yoga Section */
+        .yoga-container { display: flex; gap: 25px; flex-wrap: wrap; align-items: flex-start; }
+        .yoga-details { flex: 1; }
+        .yoga-title { font-size: 20px; font-weight: 700; color: var(--primary); margin-bottom: 15px; }
+        .yoga-steps li { margin-bottom: 8px; font-size: 14px; color: #555; }
+        .yoga-benefits { background: #e8f5e9; padding: 15px; border-radius: 10px; font-size: 13px; color: #2e7d32; display: flex; gap: 10px; }
+
+        /* Stats & Meter */
+        .bmi-meter { height: 15px; background: linear-gradient(90deg, #0984e3 0%, #00b894 50%, #d63031 100%); border-radius: 10px; margin-top: 20px; position: relative; }
+        .needle { width: 0; height: 0; border-left: 8px solid transparent; border-right: 8px solid transparent; border-top: 12px solid #333; position: absolute; top: -8px; left: 50%; transition: left 1s ease-out; }
+        .bmi-labels { display: flex; justify-content: space-between; font-size: 12px; color: #888; margin-top: 5px; }
+        
+        .stats-row { display: flex; gap: 20px; margin-bottom: 20px; }
+        .stat-box { flex: 1; background: white; padding: 20px; border-radius: 15px; display: flex; align-items: center; gap: 15px; box-shadow: 0 5px 15px rgba(0,0,0,0.03); }
+        .stat-icon { width: 50px; height: 50px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 20px; }
+        .blue-bg { background: #e3f2fd; color: #1976d2; } .orange-bg { background: #fff3e0; color: #f57c00; } .purple-bg { background: #f3e5f5; color: #8e24aa; }
+
+        /* Diet List */
+        .diet-item { display: flex; align-items: center; gap: 15px; padding: 15px; border-bottom: 1px solid #f0f0f0; transition: 0.2s; }
+        .diet-item:hover { background: #fafafa; }
+        .diet-checkbox { width: 18px; height: 18px; accent-color: var(--primary); cursor: pointer; }
+        .diet-text { font-size: 14px; }
+        .diet-cal { margin-left: auto; font-size: 12px; font-weight: bold; color: #888; background: #eee; padding: 4px 8px; border-radius: 5px; }
+
+        /* Water Tracker */
+        .water-grid { display: flex; gap: 10px; margin-top: 15px; justify-content: center; flex-wrap: wrap; }
+        .glass { font-size: 24px; cursor: pointer; color: #dfe6e9; transition: 0.3s; }
+        .glass.filled { color: #0984e3; transform: scale(1.1); }
+
+        @media(max-width: 900px) { .sidebar { display: none; } .main-content { margin-left: 0; width: 100%; } .dashboard-grid { grid-template-columns: 1fr; } .stats-row { flex-direction: column; } }
+    </style>
+</head>
+<body>
+
+    <div class="sidebar">
+        <div class="brand"><i class="fas fa-bolt"></i> IntelliFit</div>
+        <a href="#" class="menu-item active"><i class="fas fa-home"></i> Overview</a>
+        <a href="#diet-section" class="menu-item"><i class="fas fa-apple-alt"></i> My Diet Plan</a>
+        <a href="#workout-section" class="menu-item"><i class="fas fa-running"></i> Workout</a>
+        <a href="#" onclick="alert('Coming soon!')" class="menu-item"><i class="fas fa-cog"></i> Settings</a>
+        <div class="logout-box"><a href="#" onclick="logout()" class="menu-item" style="color: #d63031;"><i class="fas fa-sign-out-alt"></i> Logout</a></div>
+    </div>
+
+    <div class="main-content">
+        <div class="header">
+            <div><h1 style="margin:0; font-size: 26px;">Hello, <span id="user_name" style="color: var(--primary);">User</span>! 👋</h1><p style="color: #888; margin: 5px 0 0 0;">Here is your daily health breakdown.</p></div>
+            <div class="date-box" id="current_date">Date</div>
+        </div>
+
+        <div class="stats-row">
+            <div class="stat-box"><div class="stat-icon orange-bg"><i class="fas fa-fire"></i></div><div><div style="font-size:12px; color:#888;">BMR (Resting)</div><div style="font-weight:700; font-size:18px;" id="bmr_val">--</div></div></div>
+            <div class="stat-box"><div class="stat-icon blue-bg"><i class="fas fa-bolt"></i></div><div><div style="font-size:12px; color:#888;">TDEE (Daily)</div><div style="font-weight:700; font-size:18px;" id="tdee_val">--</div></div></div>
+            <div class="stat-box"><div class="stat-icon purple-bg"><i class="fas fa-shoe-prints"></i></div><div><div style="font-size:12px; color:#888;">Daily Step Target</div><div style="font-weight:700; font-size:18px; color: #8e24aa;" id="step_target">--</div></div></div>
+        </div>
+
+        <div class="dashboard-grid">
+            <div class="left-col">
+                <div class="card">
+                    <div style="display:flex; justify-content:space-between;"><h3>⚖️ Body Analysis</h3><span id="bmi_text" style="font-weight:bold; color:var(--primary);">Normal</span></div>
+                    <h1 id="bmi_val" style="font-size:40px; margin: 10px 0;">--</h1>
+                    <div class="bmi-meter"><div class="needle" id="bmi_needle"></div></div>
+                    <div class="bmi-labels"><span>Underweight</span><span>Normal</span><span>Overweight</span></div>
+                </div>
+
+                <div class="card" id="diet-section">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;"><h3>🥗 Today's Meal Plan</h3><button onclick="window.print()" style="border:none; background:#eee; padding:5px 10px; border-radius:5px; cursor:pointer;"><i class="fas fa-download"></i> Save</button></div>
+                    <div id="diet_list">Loading Plan...</div>
+                </div>
+
+                <div class="card" id="workout-section">
+                    <h3>🧘 Recommended Yoga for You</h3>
+                    <div class="yoga-container">
+                        <video id="yoga_video" class="yoga-video" controls autoplay loop muted>
+                            <source src="" type="video/mp4">
+                            Your browser does not support the video tag.
+                        </video>
+                        
+                        <div class="yoga-details">
+                            <div class="yoga-title" id="yoga_name">Loading Yoga...</div>
+                            <ul class="yoga-steps" id="yoga_steps"></ul>
+                            <div class="yoga-benefits"><i class="fas fa-lightbulb"></i> <span><strong>Benefits:</strong> <span id="yoga_benefit_text">--</span></span></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="right-col">
+                <div class="card" style="text-align:center;">
+                    <h3>💧 Water Intake</h3><p style="font-size:12px; color:#888;">Goal: 8 Glasses</p>
+                    <div class="water-grid">
+                        <i class="fas fa-tint glass" onclick="toggleGlass(this)"></i><i class="fas fa-tint glass" onclick="toggleGlass(this)"></i><i class="fas fa-tint glass" onclick="toggleGlass(this)"></i><i class="fas fa-tint glass" onclick="toggleGlass(this)"></i>
+                        <i class="fas fa-tint glass" onclick="toggleGlass(this)"></i><i class="fas fa-tint glass" onclick="toggleGlass(this)"></i><i class="fas fa-tint glass" onclick="toggleGlass(this)"></i><i class="fas fa-tint glass" onclick="toggleGlass(this)"></i>
+                    </div>
+                </div>
+                <div class="card"><h3>📊 Nutrition Split</h3><canvas id="macroChart"></canvas></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        window.onload = function() {
+            // Setup
+            const options = { weekday: 'short', year: 'numeric', month: 'short', day: 'numeric' };
+            document.getElementById('current_date').innerText = new Date().toLocaleDateString('en-US', options);
+            const dataStr = localStorage.getItem('userData');
+            if(!dataStr) { window.location.href = "login.html"; return; }
+            const data = JSON.parse(dataStr);
+
+            document.getElementById('user_name').innerText = data.user_name;
+            document.getElementById('bmr_val').innerText = data.bmr + " kcal";
+            document.getElementById('tdee_val').innerText = data.tdee + " kcal";
+
+            // BMI Needle
+            const bmi = parseFloat(data.bmi);
+            document.getElementById('bmi_val').innerText = bmi;
+            document.getElementById('bmi_text').innerText = data.category;
+            let pos = 50;
+            if(bmi < 18.5) pos = 15; else if (bmi >= 18.5 && bmi <= 24.9) pos = 50; else pos = 85;
+            setTimeout(() => { document.getElementById('bmi_needle').style.left = pos + "%"; }, 500);
+
+            // Steps
+            let steps = 6000;
+            if(data.activity_level == 2) steps = 8000; if(data.activity_level == 3) steps = 10000; if(data.activity_level == 4) steps = 12000;
+            document.getElementById('step_target').innerText = steps.toLocaleString() + " Steps";
+
+            // Yoga Video Setup
+            setYogaDetails(data.category);
+
+            // Diet List
+            const tempDiv = document.createElement('div'); tempDiv.innerHTML = data.diet_plan;
+            const rows = tempDiv.querySelectorAll('tr'); let listHtml = "";
+            for(let i=1; i<rows.length; i++) {
+                const cols = rows[i].querySelectorAll('td');
+                if(cols.length >= 3) {
+                    listHtml += `<div class="diet-item"><input type="checkbox" class="diet-checkbox"><div><div style="font-weight:600; font-size:15px;">${cols[0].innerText}</div><div class="diet-text">${cols[1].innerText}</div></div><div class="diet-cal">${cols[2].innerText}</div></div>`;
+                }
+            }
+            if(listHtml === "") listHtml = data.diet_plan;
+            document.getElementById('diet_list').innerHTML = listHtml;
+
+            // Chart
+            renderChart(data.category);
+        };
+
+        function setYogaDetails(category) {
+            let yoga = {};
+            
+            if (category === "Overweight") {
+                yoga = {
+                    name: "Surya Namaskar (Video Guide)",
+                    video: "videos/yoga_overweight.mp4", //  Video Path
+                    steps: ["Start in prayer pose.", "Inhale, lift arms up & back.", "Exhale, bend forward.", "Step leg back into lunge.", "Flow through the movement."],
+                    benefits: "Burns calories fast & tones entire body."
+                };
+            } else if (category === "Underweight") {
+                yoga = {
+                    name: "Bhujangasana (Video Guide)",
+                    video: "videos/yoga_underweight.mp4", //  Video Path
+                    steps: ["Lie on stomach.", "Place hands under shoulders.", "Lift chest gently.", "Look up and breathe.", "Hold and release."],
+                    benefits: "Increases appetite & strengthens back."
+                };
+            } else {
+                yoga = {
+                    name: "Vrikshasana (Video Guide)",
+                    video: "videos/yoga_normal.mp4", //  Video Path
+                    steps: ["Stand on one leg.", "Place foot on inner thigh.", "Hands in prayer position.", "Find your balance.", "Switch legs."],
+                    benefits: "Improves balance & mental focus."
+                };
+            }
+
+            document.getElementById('yoga_name').innerText = yoga.name;
+            document.getElementById('yoga_video').src = yoga.video; // Video source set ho raha hai
+            document.getElementById('yoga_benefit_text').innerText = yoga.benefits;
+            
+            let stepsHtml = "";
+            yoga.steps.forEach(step => { stepsHtml += `<li>${step}</li>`; });
+            document.getElementById('yoga_steps').innerHTML = stepsHtml;
+        }
+
+        function toggleGlass(el) { el.classList.toggle('filled'); }
+        function renderChart(category) {
+            const ctx = document.getElementById('macroChart').getContext('2d');
+            let p=30, c=50, f=20;
+            if(category==="Overweight") { p=40; c=30; f=30; } if(category==="Underweight") { p=25; c=55; f=20; }
+            new Chart(ctx, { type: 'doughnut', data: { labels: ['Protein', 'Carbs', 'Fats'], datasets: [{ data: [p, c, f], backgroundColor: ['#2e7d32', '#fbc531', '#e84118'], borderWidth: 0 }] }, options: { cutout: '70%', plugins: { legend: {position: 'bottom'} } } });
+        }
+        function logout() { localStorage.removeItem('userData'); window.location.href = "index.html"; }
+    </script>
+    <div id="chatbot-container">
+        
+        <div id="chat-label" class="chat-label-anim">
+            Need Diet Tips? <strong>Ask AI Coach!</strong> 🤖
+        </div>
+
+        <button id="chat-toggle-btn" onclick="toggleChat()">
+            <i class="fas fa-comment-dots"></i>
+        </button>
+
+        <div id="chat-window">
+            <div class="chat-header">
+                <span><i class="fas fa-robot"></i> IntelliFit AI</span>
+                <button onclick="toggleChat()" style="background:none; border:none; color:white; cursor:pointer;">✖</button>
+            </div>
+            <div class="chat-body" id="chat-messages">
+                <div class="bot-msg">Hello! I am your personal health assistant. Ask me about diet, yoga, or workouts! 🌿</div>
+            </div>
+            <div class="chat-footer">
+                <input type="text" id="user-input" placeholder="Type your question..." onkeypress="handleEnter(event)">
+                <button onclick="sendMessage()">➤</button>
+            </div>
+        </div>
+
+    </div>
+
+    <style>
+        /* Floating Container */
+        #chatbot-container {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            z-index: 9999;
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end;
+            font-family: 'Poppins', sans-serif;
+        }
+
+        /* Label Bubble (Text) */
+        .chat-label-anim {
+            background: white;
+            padding: 10px 15px;
+            border-radius: 20px 20px 0 20px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+            margin-bottom: 10px;
+            font-size: 14px;
+            color: #333;
+            animation: float 3s ease-in-out infinite;
+            border: 1px solid #eee;
+        }
+
+        /* Round Button */
+        #chat-toggle-btn {
+            width: 65px;
+            height: 65px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #2e7d32, #4caf50);
+            color: white;
+            border: none;
+            font-size: 28px;
+            cursor: pointer;
+            box-shadow: 0 5px 20px rgba(46, 125, 50, 0.4);
+            transition: transform 0.3s;
+            display: flex; align-items: center; justify-content: center;
+        }
+        #chat-toggle-btn:hover { transform: scale(1.1); }
+
+        /* Chat Window */
+        #chat-window {
+            display: none; /* Initially Hidden */
+            width: 350px;
+            height: 450px;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+            overflow: hidden;
+            flex-direction: column;
+            margin-bottom: 15px;
+            border: 1px solid #eee;
+        }
+
+        /* Window Parts */
+        .chat-header { background: #2e7d32; color: white; padding: 15px; font-weight: bold; display: flex; justify-content: space-between; align-items: center; }
+        .chat-body { flex: 1; padding: 15px; overflow-y: auto; background: #f9f9f9; font-size: 14px; }
+        .chat-footer { padding: 10px; display: flex; border-top: 1px solid #eee; background: white; }
+        .chat-footer input { flex: 1; border: none; padding: 10px; outline: none; }
+        .chat-footer button { background: #2e7d32; color: white; border: none; padding: 10px 15px; border-radius: 5px; cursor: pointer; }
+
+        /* Messages */
+        .bot-msg { background: #e8f5e9; padding: 8px 12px; border-radius: 10px 10px 10px 0; margin-bottom: 10px; align-self: flex-start; width: fit-content; color: #333; }
+        .user-msg { background: #2e7d32; color: white; padding: 8px 12px; border-radius: 10px 10px 0 10px; margin-bottom: 10px; align-self: flex-end; width: fit-content; margin-left: auto; }
+
+        /* Animation */
+        @keyframes float { 0% { transform: translateY(0px); } 50% { transform: translateY(-5px); } 100% { transform: translateY(0px); } }
+    </style>
+
+    <script>
+        function toggleChat() {
+            const window = document.getElementById('chat-window');
+            const label = document.getElementById('chat-label');
+            
+            if (window.style.display === 'none' || window.style.display === '') {
+                window.style.display = 'flex';
+                label.style.display = 'none';
+            } else {
+                window.style.display = 'none';
+                label.style.display = 'block';
+            }
+        }
+
+        async function sendMessage() {
+            const input = document.getElementById('user-input');
+            const msgArea = document.getElementById('chat-messages');
+            const text = input.value.trim();
+
+            if(text) {
+                // 1. User message on screen
+                const userDiv = document.createElement('div');
+                userDiv.className = 'user-msg';
+                userDiv.innerText = text;
+                msgArea.appendChild(userDiv);
+
+                input.value = "";
+                msgArea.scrollTop = msgArea.scrollHeight;
+
+                // --- 2. REAL BACKEND CALL ---
+                try {
+
+                    const loadingDiv = document.createElement('div');
+                    loadingDiv.className = 'bot-msg';
+                    loadingDiv.innerText = "Thinking... 🤔";
+                    loadingDiv.id = "loading-msg";
+                    msgArea.appendChild(loadingDiv);
+                    msgArea.scrollTop = msgArea.scrollHeight;
+
+                    const response = await fetch('http://127.0.0.1:8000/chat', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ message: text })
+                    });
+                    
+                    const data = await response.json();
+                    
+                    // Loading
+                    const loader = document.getElementById('loading-msg');
+                    if(loader) loader.remove();
+
+
+                    const botDiv = document.createElement('div');
+                    botDiv.className = 'bot-msg';
+                    botDiv.innerText = data.reply;
+                    msgArea.appendChild(botDiv);
+                    
+                } catch (error) {
+
+                    const loader = document.getElementById('loading-msg');
+                    if(loader) loader.remove();
+                    
+                    const errorDiv = document.createElement('div');
+                    errorDiv.className = 'bot-msg';
+                    errorDiv.innerText = "⚠️ Error: Backend is not running!";
+                    msgArea.appendChild(errorDiv);
+                }
+
+                msgArea.scrollTop = msgArea.scrollHeight;
+            }
+        }
+
+        function handleEnter(e) {
+            if(e.key === 'Enter') sendMessage();
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Panel - IntelliFit</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body { font-family: 'Segoe UI', sans-serif; background-color: #f4f6f9; margin: 0; padding: 20px; }
+        
+        /* Navbar */
+        .navbar { background: white; padding: 15px 30px; display: flex; justify-content: space-between; align-items: center; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); margin-bottom: 20px; }
+        .logo { font-size: 22px; font-weight: bold; color: #333; }
+        .logo span { color: #28a745; }
+        
+        /* Dashboard Cards */
+        .dashboard-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 30px; }
+        .chart-card { background: white; padding: 20px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); }
+        h3 { margin-top: 0; color: #555; font-size: 16px; border-bottom: 1px solid #eee; padding-bottom: 10px; }
+
+        /* Search & Table */
+        .table-container { background: white; padding: 20px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); }
+        .controls { display: flex; justify-content: space-between; margin-bottom: 15px; }
+        input[type="text"] { padding: 10px; width: 300px; border: 1px solid #ddd; border-radius: 5px; outline: none; }
+        
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+        th { background: #f8f9fa; padding: 12px; text-align: left; color: #666; font-weight: 600; }
+        td { padding: 12px; border-bottom: 1px solid #eee; color: #333; }
+        tr:hover { background: #f1f1f1; }
+        
+        .badge { padding: 5px 10px; border-radius: 20px; font-size: 12px; color: white; }
+        .btn-delete { background: #ff4d4d; color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; }
+        .btn-delete:hover { background: #e60000; }
+
+        @media(max-width: 768px) { .dashboard-grid { grid-template-columns: 1fr; } }
+    </style>
+</head>
+<body>
+
+    <div class="navbar">
+        <div class="logo">IntelliFit <span>Admin Pro</span></div>
+        <div>Total Users: <strong id="total_users">0</strong></div>
+    </div>
+
+    <div class="dashboard-grid">
+        <div class="chart-card">
+            <h3>📈 User Categories (Weight Status)</h3>
+            <canvas id="categoryChart"></canvas>
+        </div>
+        <div class="chart-card">
+            <h3>👥 Gender Distribution</h3>
+            <canvas id="genderChart"></canvas>
+        </div>
+    </div>
+
+    <div class="table-container">
+        <div class="controls">
+            <h3>User Management</h3>
+            <input type="text" id="searchInput" placeholder="🔍 Search by Name or Email..." onkeyup="filterUsers()">
+        </div>
+
+        <table>
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Name</th>
+                    <th>Email</th>
+                    <th>BMI</th>
+                    <th>Category</th>
+                    <th>Action</th>
+                </tr>
+            </thead>
+            <tbody id="userTable">
+                </tbody>
+        </table>
+    </div>
+
+    <script>
+        const secretKey = prompt("🔒 Enter Admin Password to Access:");
+
+        if (secretKey !== "admin123") {
+            alert("Access Denied! Wrong Password.");
+            window.location.href = "index.html";
+        }
+        
+        let allUsers = [];
+
+        window.onload = async function() {
+            await loadStats();
+            await loadUsers();
+        };
+
+        // 1. Analytics Load
+        async function loadStats() {
+            const res = await fetch('http://127.0.0.1:8000/admin/stats');
+            const data = await res.json();
+            
+            if(data.status === "Success") {
+                // Pie Chart: Categories
+                const catLabels = data.categories.map(i => i.diet_category);
+                const catData = data.categories.map(i => i.count);
+                
+                new Chart(document.getElementById('categoryChart'), {
+                    type: 'doughnut',
+                    data: {
+                        labels: catLabels,
+                        datasets: [{ data: catData, backgroundColor: ['#28a745', '#ffc107', '#dc3545', '#17a2b8'] }]
+                    }
+                });
+
+                // Bar Chart: Gender
+                const genLabels = data.genders.map(i => i.gender);
+                const genData = data.genders.map(i => i.count);
+
+                new Chart(document.getElementById('genderChart'), {
+                    type: 'bar',
+                    data: {
+                        labels: genLabels,
+                        datasets: [{ label: 'Users', data: genData, backgroundColor: '#007bff' }]
+                    },
+                    options: { scales: { y: { beginAtZero: true } } }
+                });
+            }
+        }
+
+        // 2. Users Load
+        async function loadUsers() {
+            const res = await fetch('http://127.0.0.1:8000/admin/users');
+            const data = await res.json();
+            
+            if(data.status === "Success") {
+                allUsers = data.users; // Save for search
+                document.getElementById('total_users').innerText = allUsers.length;
+                renderTable(allUsers);
+            }
+        }
+
+        // 3. Table Show
+        function renderTable(users) {
+            const tbody = document.getElementById('userTable');
+            tbody.innerHTML = "";
+            users.forEach(user => {
+                let color = '#6c757d';
+                if(user.diet_category === 'Normal') color = '#28a745';
+                if(user.diet_category === 'Overweight') color = '#dc3545';
+                if(user.diet_category === 'Underweight') color = '#17a2b8';
+
+                tbody.innerHTML += `
+                    <tr>
+                        <td>#${user.id}</td>
+                        <td><b>${user.name}</b></td>
+                        <td>${user.email}</td>
+                        <td>${user.bmi}</td>
+                        <td><span class="badge" style="background:${color}">${user.diet_category}</span></td>
+                        <td><button class="btn-delete" onclick="deleteUser(${user.id})">Delete</button></td>
+                    </tr>
+                `;
+            });
+        }
+
+        // 4. Search Functionality
+        function filterUsers() {
+            const query = document.getElementById('searchInput').value.toLowerCase();
+            const filtered = allUsers.filter(user => 
+                user.name.toLowerCase().includes(query) || 
+                user.email.toLowerCase().includes(query)
+            );
+            renderTable(filtered);
+        }
+
+        // 5. Delete User
+        async function deleteUser(id) {
+            if(confirm("Are you sure?")) {
+                await fetch(`http://127.0.0.1:8000/admin/users/${id}`, { method: 'DELETE' });
+                loadUsers(); // Refresh
+                loadStats(); // Chart Update
+            }
+        }
+    </script>
+</body>
+</html>
